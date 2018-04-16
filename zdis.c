@@ -111,11 +111,11 @@ static const uint8_t main_insts[][1 << 6][3] = {
     JR(C)            ADD(HL,SP)  LD(A,ADDR)  DEC(SP) INC(A)   DEC(A)   LD(A,BYTE)   I(C,,,C,,F)
   }, {
     RET(NZ)           POP(BC)     JP(NZ,ABS)  JP(,ABS)     CALL(NZ) PUSH(BC) ADD(A,BYTE) RST()
-    RET(Z)            RET()       JP(Z,ABS)   P(0)         CALL(Z)  CALL()   ADC(A,BYTE) RST()
+    RET(Z)            RET()       JP(Z,ABS)   P(1)         CALL(Z)  CALL()   ADC(A,BYTE) RST()
     RET(NC)           POP(DE)     JP(NC,ABS)  OUT(,PORT,A) CALL(NC) PUSH(DE) SUB(BYTE)   RST()
     RET(C)            I(E,X,,X,,) JP(C,ABS)   IN(,A,PORT)  CALL(C)  P(2)     SBC(A,BYTE) RST()
     RET(PO)           POP(HL)     JP(PO,ABS)  EX(_SP,HL)   CALL(PO) PUSH(HL) AND(BYTE)   RST()
-    RET(PE)           JP(,_HL)    JP(PE,ABS)  EX(DE,HL)    CALL(PE) P(1)     XOR(BYTE)   RST()
+    RET(PE)           JP(,_HL)    JP(PE,ABS)  EX(DE,HL)    CALL(PE) P(0)     XOR(BYTE)   RST()
     RET(P)            POP(AF)     JP(P,ABS)   I(D,I,,,,)   CALL(P)  PUSH(AF) OR(BYTE)    RST()
     RET(M)            LD(SP,HL)   JP(M,ABS)   I(E,I,,,,)   CALL(M)  P(3)     CP(BYTE)    RST()
   }
@@ -340,9 +340,9 @@ static uint32_t zdis_decode(struct zdis_ctx *ctx) {
   extra = (extra & ~MASK(3, 4)) | (opc & MASK(3, 3)) | (inst << 6 & MASK(6, 1));
   switch (inst) {
     case 0:
-      return (lookup(cb_insts[opc >> 3]) + (opc >> 3 != 6 ? opc << 17 & MASK(17, 3) : 0)) | extra << 24;
-    case 1:
       return lookup(ed_insts[opc]) | extra << 24;
+    case 1:
+      return (lookup(cb_insts[opc >> 3]) + (opc >> 3 != 6 ? opc << 17 & MASK(17, 3) : 0)) | extra << 24;
     default:
       if ((inst = lookup(xd_insts[opc]))) return inst | extra << 24;
       ctx->zdis_end_addr++;

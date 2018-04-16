@@ -213,7 +213,7 @@ static bool next(uint8_t *res, struct zdis_ctx *ctx) {
 }
 
 static bool put(struct zdis_ctx *ctx, char c) {
-  return ctx->zdis_put(ctx, ZDIS_PUT_CHAR, c);
+  return ctx->zdis_put(ctx, ZDIS_PUT_CHAR, c, false);
 }
 static bool letter(struct zdis_ctx *ctx, char c) {
   if (!c) return true;
@@ -241,10 +241,11 @@ static bool sep(struct zdis_ctx *ctx, bool sep, bool last, uint8_t extra, uint8_
   return !sep || ((*which || !(extra & MASK(2, 1)) ||
 		   (put(ctx, '.') && suffix(ctx, extra & MASK(0, 1)) &&
 		    letter(ctx, 'i') && suffix(ctx, extra & MASK(1, 1)))) &&
-		  (ctx->zdis_put(ctx, last ? ZDIS_PUT_END : ZDIS_PUT_MNE_SEP + (*which)++, 0)));
+		  (ctx->zdis_put(ctx, last ? ZDIS_PUT_END : ZDIS_PUT_MNE_SEP + (*which)++, 0, false)));
 }
 static bool arg(struct zdis_ctx *ctx, enum arg arg, uint8_t extra, uint8_t *which) {
   uint8_t a, b, c = 0;
+  bool il = extra & MASK(2, 1) ? extra & MASK(1, 1) : ctx->zdis_adl;
   switch (arg) {
     default:
       return letters(ctx, args[arg], ARG_MAX_LEN) && (args[arg][0] != '(' || put(ctx, ')'));
@@ -252,20 +253,18 @@ static bool arg(struct zdis_ctx *ctx, enum arg arg, uint8_t extra, uint8_t *whic
     case ARG_PORT:
     case ARG_OFF:
     case ARG_REL:
-      return next(&a, ctx) &&
-	(arg != ARG_PORT || put(ctx, '(')) &&
-	ctx->zdis_put(ctx, ARG2PUT(arg), arg < ARG_OFF ? a : (int8_t)a) &&
+      return next(&a, ctx) && (arg != ARG_PORT || put(ctx, '(')) &&
+	ctx->zdis_put(ctx, ARG2PUT(arg), arg < ARG_OFF ? a : (int8_t)a, il) &&
 	(arg != ARG_PORT || put(ctx, ')'));
     case ARG_WORD:
     case ARG_ADDR:
     case ARG_ABS:
-      return next(&a, ctx) && next(&b, ctx) &&
-	(!(extra & MASK(2, 1) ? extra & MASK(1, 1) : ctx->zdis_adl) || next(&c, ctx)) &&
+        return next(&a, ctx) && next(&b, ctx) && (!il || next(&c, ctx)) &&
 	(arg != ARG_ADDR || put(ctx, '(')) &&
-	ctx->zdis_put(ctx, ARG2PUT(arg), a | b << 8 | c << 16) &&
+        ctx->zdis_put(ctx, ARG2PUT(arg), a | b << 8 | c << 16, il) &&
 	(arg != ARG_ADDR || put(ctx, ')'));
     case ARG_RST:
-      return ctx->zdis_put(ctx, ARG2PUT(arg), extra & MASK(3, 3));
+      return ctx->zdis_put(ctx, ARG2PUT(arg), extra & MASK(3, 3), il);
     case ARG_A_:
     case ARG_F_:
       return !ctx->zdis_implicit ||
@@ -281,13 +280,13 @@ static bool arg(struct zdis_ctx *ctx, enum arg arg, uint8_t extra, uint8_t *whic
       return (arg < ARG__IXYO || (arg == ARG__IXYO ? next(&a, ctx) : peek(&a, ctx, -2))) &&
 	(arg < ARG__IXY || put(ctx, '(')) &&
 	index(ctx, (extra >> 6 ^ (arg == ARG_IYX)) & MASK(0, 1)) &&
-	(arg < ARG__IXYO || ctx->zdis_put(ctx, ZDIS_PUT_OFF, (int8_t)a)) &&
+	(arg < ARG__IXYO || ctx->zdis_put(ctx, ZDIS_PUT_OFF, (int8_t)a, il)) &&
 	(arg >= ARG_IXY || letter(ctx, arg == ARG_IXYH ? 'H' : 'L')) &&
 	(arg < ARG__IXY || put(ctx, ')'));
     case ARG_IXO:
     case ARG_IYO:
       return next(&a, ctx) && index(ctx, (arg ^ ARG_IXO) & MASK(0, 1)) &&
-	ctx->zdis_put(ctx, ZDIS_PUT_OFF, (int8_t)a);
+	ctx->zdis_put(ctx, ZDIS_PUT_OFF, (int8_t)a, il);
   }
 }
 static uint8_t arg_size(struct zdis_ctx *ctx, enum arg arg, uint8_t extra) {

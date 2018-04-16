@@ -17,7 +17,7 @@ enum zdis_put {
 
 struct zdis_ctx {
   int (*zdis_read)(struct zdis_ctx *ctx, uint32_t addr);
-  bool (*zdis_put)(struct zdis_ctx *ctx, enum zdis_put kind, int32_t val);
+  bool (*zdis_put)(struct zdis_ctx *ctx, enum zdis_put kind, int32_t val, bool il);
   uint32_t zdis_start_addr, zdis_end_addr;
   bool zdis_lowercase : 1;
   bool zdis_implicit : 1;

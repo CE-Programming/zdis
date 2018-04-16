@@ -2,6 +2,10 @@
 #include <stdint.h>
 #include <stdlib.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 enum zdis_put {
 #define IMM(x) ZDIS_PUT_##x,
 #include "imm.def"
@@ -24,3 +28,7 @@ struct zdis_ctx {
 
 int8_t zdis_inst_size(struct zdis_ctx *ctx);
 bool zdis_put_inst(struct zdis_ctx *ctx);
+
+#ifdef __cplusplus
+}
+#endif

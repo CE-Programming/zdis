@@ -234,7 +234,7 @@ static bool mne(struct zdis_ctx *ctx, enum mne mne) {
 static bool suffix(struct zdis_ctx *ctx, bool suffix) {
   return letter(ctx, suffix ? 'L' : 'S');
 }
-static bool index(struct zdis_ctx *ctx, bool index) {
+static bool idx(struct zdis_ctx *ctx, bool index) {
   return letter(ctx, 'I') && letter(ctx, 'X' + index);
 }
 static bool sep(struct zdis_ctx *ctx, bool sep, bool last, uint8_t extra, uint8_t *which) {
@@ -244,7 +244,7 @@ static bool sep(struct zdis_ctx *ctx, bool sep, bool last, uint8_t extra, uint8_
 		  (ctx->zdis_put(ctx, last ? ZDIS_PUT_END : ZDIS_PUT_MNE_SEP + (*which)++, 0, false)));
 }
 static bool arg(struct zdis_ctx *ctx, enum arg arg, uint8_t extra, uint8_t *which) {
-  uint8_t a, b, c = 0;
+  uint8_t a = 0, b, c = 0;
   bool il = extra & MASK(2, 1) ? extra & MASK(1, 1) : ctx->zdis_adl;
   switch (arg) {
     default:
@@ -279,13 +279,13 @@ static bool arg(struct zdis_ctx *ctx, enum arg arg, uint8_t extra, uint8_t *whic
     case ARG__IXYO2:
       return (arg < ARG__IXYO || (arg == ARG__IXYO ? next(&a, ctx) : peek(&a, ctx, -2))) &&
 	(arg < ARG__IXY || put(ctx, '(')) &&
-	index(ctx, (extra >> 6 ^ (arg == ARG_IYX)) & MASK(0, 1)) &&
+	idx(ctx, (extra >> 6 ^ (arg == ARG_IYX)) & MASK(0, 1)) &&
 	(arg < ARG__IXYO || ctx->zdis_put(ctx, ZDIS_PUT_OFF, (int8_t)a, il)) &&
 	(arg >= ARG_IXY || letter(ctx, arg == ARG_IXYH ? 'H' : 'L')) &&
 	(arg < ARG__IXY || put(ctx, ')'));
     case ARG_IXO:
     case ARG_IYO:
-      return next(&a, ctx) && index(ctx, (arg ^ ARG_IXO) & MASK(0, 1)) &&
+      return next(&a, ctx) && idx(ctx, (arg ^ ARG_IXO) & MASK(0, 1)) &&
 	ctx->zdis_put(ctx, ZDIS_PUT_OFF, (int8_t)a, il);
   }
 }

@@ -1,3 +1,8 @@
+#ifdef DEBUG_SUPPORT
+
+#ifndef ZDIS_H
+#define ZDIS_H
+
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdlib.h>
@@ -31,4 +36,8 @@ bool zdis_put_inst(struct zdis_ctx *ctx);
 
 #ifdef __cplusplus
 }
+#endif
+
+#endif
+
 #endif

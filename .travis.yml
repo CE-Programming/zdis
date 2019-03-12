@@ -6,8 +6,12 @@ compiler:
   - clang
   - gcc
 
+env:
+  - CFLAGS="-std=c11 -O2 -DDEBUG_SUPPORT"
+
 script:
-  - $CC -std=c11 -O2 -c zdis.c
+  - $CC $CFLAGS -c zdis.c
+  - $CC $CFLAGS test.c zdis.o
   
 notifications:
   irc:

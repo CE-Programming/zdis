@@ -9,6 +9,7 @@ enum Options {
     MNE_SPACE    = 1 << 2,
     ARG_SPACE    = 1 << 3,
     COMPUTE_REL  = 1 << 4,
+    COMPUTE_ABS  = 1 << 5,
 };
 
 static int read(struct zdis_ctx *ctx, uint32_t addr) {
@@ -38,7 +39,7 @@ static bool put(struct zdis_ctx *ctx, enum zdis_put kind, int32_t val, bool il) 
                 *p++ = '+';
             } else if (val < 0) {
                 *p++ = '-';
-                val = !val;
+                val = -val;
             } else {
                 return true;
             }
@@ -64,9 +65,14 @@ static bool put(struct zdis_ctx *ctx, enum zdis_put kind, int32_t val, bool il) 
             }
             *p = '\0';
             return printf(pattern, val) >= 0;
+        case ZDIS_PUT_ABS: // JP/CALL immediate targets
+            if (ctx->zdis_user_size & COMPUTE_ABS) {
+                int32_t extend = il ? 8 : 16;
+                return putchar('$') != EOF && put(ctx, ZDIS_PUT_OFF, (int32_t)(val - ctx->zdis_start_addr) << extend >> extend, il);
+            }
+            // fallthrough
         case ZDIS_PUT_WORD: // word immediates (il ? 24 : 16) bits wide
         case ZDIS_PUT_ADDR: // load/store immediate addresses
-        case ZDIS_PUT_ABS: // JP/CALL immediate targets
             if (ctx->zdis_user_size & DECIMAL_IMM) {
                 *p++ = '%';
                 *p++ = 'u';
@@ -154,6 +160,10 @@ int main(int argc, char **argv) {
             ctx.zdis_user_size |= COMPUTE_REL;
         } else if (!strcmp(*argv, "--literal-relative")) { // literal PC relative addresses (jr $+3)
             ctx.zdis_user_size &= ~COMPUTE_REL;
+        } else if (!strcmp(*argv, "--compute-absolute")) { // compute PC relative addresses (jp $+3)
+            ctx.zdis_user_size |= COMPUTE_ABS;
+        } else if (!strcmp(*argv, "--literal-absolute")) { // literal PC relative addresses (jp $1234)
+            ctx.zdis_user_size &= ~COMPUTE_ABS;
         } else {
             if (ctx.zdis_user_ptr) {
                 fputs("error: multiple files specified\n", stderr);

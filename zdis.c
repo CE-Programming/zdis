@@ -203,7 +203,7 @@ static const uint8_t ed_insts[1 << 8][3] = {
   TRAP() TRAP() TRAP()        TRAP()        TRAP() TRAP() TRAP() TRAP()
 };
 #undef I
-#define I(m1,m2,s1,a1,s2,a2) (MNE_##m1|MNE_##m2<<5|ARG_##a1<<10|SEP_##s1<<16|ARG_##a2<<17|SEP_##s2<<23)
+#define I(m1,m2,s1,a1,s2,a2) ((uint32_t)MNE_##m1|(uint32_t)MNE_##m2<<5|(uint32_t)ARG_##a1<<10|(uint32_t)SEP_##s1<<16|(uint32_t)ARG_##a2<<17|(uint32_t)SEP_##s2<<23)
 
 static bool peek(uint8_t *res, struct zdis_ctx *ctx, int8_t off) {
   int byte = ctx->zdis_read(ctx, ctx->zdis_end_addr + off);
@@ -263,7 +263,7 @@ static bool arg(struct zdis_ctx *ctx, enum arg arg, uint8_t extra, uint8_t *whic
     case ARG_ABS:
         return next(&a, ctx) && next(&b, ctx) && (!il || next(&c, ctx)) &&
 	(arg != ARG_ADDR || put(ctx, '(')) &&
-        ctx->zdis_put(ctx, ARG2PUT(arg), a | b << 8 | c << 16, il) &&
+        ctx->zdis_put(ctx, ARG2PUT(arg), (uint32_t)a | (uint32_t)b << 8 | (uint32_t)c << 16, il) &&
 	(arg != ARG_ADDR || put(ctx, ')'));
     case ARG_RST:
       return ctx->zdis_put(ctx, ARG2PUT(arg), extra & MASK(3, 3), il);
@@ -311,7 +311,7 @@ static uint8_t arg_size(struct zdis_ctx *ctx, enum arg arg, uint8_t extra) {
 }
 
 static uint32_t lookup(const uint8_t *entry) {
-  return entry[0] | entry[1] << 8 | entry[2] << 16;
+  return (uint32_t)entry[0] | (uint32_t)entry[1] << 8 | (uint32_t)entry[2] << 16;
 }
 
 static uint32_t zdis_decode(struct zdis_ctx *ctx) {
@@ -329,27 +329,27 @@ static uint32_t zdis_decode(struct zdis_ctx *ctx) {
       if (x <= MASK(0, 2)) {
 	if (!(extra & MASK(2, 1))) { extra |= MASK(2, 1) | x; continue; }
 	ctx->zdis_end_addr--;
-	return I(N,O,,N,,I) | extra << 24;
+	return I(N,O,,N,,I) | (uint32_t)extra << 24;
       }
-      if (x == 6) return I(,,,H,,ALT) | extra << 24;
+      if (x == 6) return I(,,,H,,ALT) | (uint32_t)extra << 24;
     }
-    return (I(L,D,_,B,_,B) + (x << 10) + (y << 17)) | extra << 24;
+    return (I(L,D,_,B,_,B) + ((uint32_t)x << 10) + ((uint32_t)y << 17)) | (uint32_t)extra << 24;
   }
-  if (z == 2) return (lookup(main_insts[1][x << 3 | 6]) & ~MASK(17, 6)) | (ARG_B + y) << 17 | extra << 24;
-  if ((inst = lookup(main_insts[z >> 1][opc & MASK(0, 6)])) > MASK(0, 5)) return inst | extra << 24;
+  if (z == 2) return (lookup(main_insts[1][x << 3 | 6]) & ~MASK(17, 6)) | (uint32_t)(ARG_B + y) << 17 | (uint32_t)extra << 24;
+  if ((inst = lookup(main_insts[z >> 1][opc & MASK(0, 6)])) > MASK(0, 5)) return inst | (uint32_t)extra << 24;
   if (!next(&opc, ctx)) return 0;
   extra = (extra & ~MASK(3, 4)) | (opc & MASK(3, 3)) | (inst << 6 & MASK(6, 1));
   switch (inst) {
     case 0:
-      return lookup(ed_insts[opc]) | extra << 24;
+      return lookup(ed_insts[opc]) | (uint32_t)extra << 24;
     case 1:
-      return (lookup(cb_insts[opc >> 3]) + (opc >> 3 != 6 ? opc << 17 & MASK(17, 3) : 0)) | extra << 24;
+      return (lookup(cb_insts[opc >> 3]) + (opc >> 3 != 6 ? (uint32_t)opc << 17 & MASK(17, 3) : 0)) | (uint32_t)extra << 24;
     default:
-      if ((inst = lookup(xd_insts[opc]))) return inst | extra << 24;
+      if ((inst = lookup(xd_insts[opc]))) return inst | (uint32_t)extra << 24;
       ctx->zdis_end_addr++;
       if (!next(&opc, ctx)) return 0;
-      if (opc >> 3 == 6 || (opc & MASK(0, 3)) != 6) return I(T,R,,A,,P) | extra << 24;
-      return (lookup(cb_insts[opc >> 3]) + ((ARG__IXYO2 - ARG_B) << 17)) | extra << 24;
+      if (opc >> 3 == 6 || (opc & MASK(0, 3)) != 6) return I(T,R,,A,,P) | (uint32_t)extra << 24;
+      return (lookup(cb_insts[opc >> 3]) + ((uint32_t)(ARG__IXYO2 - ARG_B) << 17)) | (uint32_t)extra << 24;
   }
 }
 
